@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Вход в SoundCloud</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #f4f5f7; color: #1a1a1a; padding: 20px;
+  }
+  .card {
+    width: 100%; max-width: 420px; background: #fff; border-radius: 18px;
+    padding: 28px 24px; box-shadow: 0 6px 24px rgba(0,0,0,.08); text-align: center;
+  }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  p { margin: 0 0 20px; color: #555; line-height: 1.45; }
+  button, a.btn {
+    display: block; width: 100%; border: 0; border-radius: 12px; padding: 16px;
+    font-size: 17px; font-weight: 600; cursor: pointer; text-decoration: none;
+  }
+  #copy { background: #ff5500; color: #fff; }
+  #copy.done { background: #2e9e4f; }
+  a.btn { background: #e8f1fb; color: #1f6fd1; margin-top: 12px; }
+  .hint { font-size: 13px; color: #888; margin-top: 16px; margin-bottom: 0; }
+  textarea {
+    width: 100%; height: 0; opacity: 0; position: absolute; left: -9999px;
+  }
+  .error h1 { color: #c4262e; }
+</style>
+</head>
+<body>
+<div class="card" id="ok" hidden>
+  <h1>Почти готово ✅</h1>
+  <p>Нажми кнопку — код скопируется и откроется бот. Там просто вставь его сообщением.</p>
+  <button id="copy">Скопировать код и вернуться в бот</button>
+  <a class="btn" id="back" href="https://t.me/voltamusictransfer_bot">Открыть бот без копирования</a>
+  <p class="hint">Код одноразовый и действует несколько минут. Без бота он бесполезен.</p>
+  <textarea id="payload" readonly></textarea>
+</div>
+
+<div class="card error" id="err" hidden>
+  <h1>Вход не завершён</h1>
+  <p id="errtext">SoundCloud не передал код. Вернись в бот и нажми «Подключить SoundCloud» ещё раз.</p>
+  <a class="btn" href="https://t.me/voltamusictransfer_bot">Вернуться в бот</a>
+</div>
+
+<script>
+(function () {
+  var BOT = "https://t.me/voltamusictransfer_bot";
+  var q = new URLSearchParams(location.search);
+  var code = q.get("code");
+  var state = q.get("state") || "";
+
+  if (!code) {
+    if (q.get("error") === "access_denied") {
+      document.getElementById("errtext").textContent =
+        "Ты отменил вход. Если передумаешь — вернись в бот и нажми «Подключить SoundCloud».";
+    }
+    document.getElementById("err").hidden = false;
+    return;
+  }
+
+  // Убираем код из адресной строки и истории браузера.
+  history.replaceState(null, "", location.pathname);
+
+  // Формат, который ждёт бот: sc:<state>:<code>
+  var payload = "sc:" + state + ":" + code;
+  var area = document.getElementById("payload");
+  area.value = payload;
+  document.getElementById("ok").hidden = false;
+
+  var btn = document.getElementById("copy");
+
+  function fallbackCopy() {
+    area.style.position = "static";
+    area.focus();
+    area.select();
+    area.setSelectionRange(0, payload.length);
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) {}
+    area.style.position = "absolute";
+    return ok;
+  }
+
+  function done() {
+    btn.textContent = "Скопировано — открываю бот…";
+    btn.className = "done";
+    setTimeout(function () { location.href = BOT; }, 600);
+  }
+
+  btn.addEventListener("click", function () {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(payload).then(done, function () {
+        if (fallbackCopy()) done(); else btn.textContent = "Не удалось скопировать :(";
+      });
+    } else if (fallbackCopy()) {
+      done();
+    } else {
+      btn.textContent = "Не удалось скопировать :(";
+    }
+  });
+})();
+</script>
+</body>
+</html>
